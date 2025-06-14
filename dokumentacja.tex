@@ -1,0 +1,388 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[polish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{booktabs}
+
+\geometry{margin=2.5cm}
+
+% Konfiguracja dla listingów kodu
+\lstset{
+    backgroundcolor=\color{gray!10},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    commentstyle=\color{green!50!black},
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    frame=single,
+    language=Python
+}
+
+\title{\textbf{Kompresja sygnałów EKG z wykorzystaniem autoenkodera}}
+\author{Bartłomiej Rydzak, Mateusz Adamczyk, Michał Saturczak}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Wprowadzenie}
+
+Niniejszy projekt przedstawia implementację systemu kompresji sygnałów elektrokardiograficznych (EKG) z wykorzystaniem głębokich sieci neuronowych. W przeciwieństwie do tradycyjnych metod kompresji, zastosowane rozwiązanie wykorzystuje nowoczesne narzędzia uczenia maszynowego - TensorFlow 2.x oraz Keras API - do stworzenia autoenkodera zdolnego do stratnej kompresji sygnałów biologicznych.
+
+Głównym celem pracy było opracowanie efektywnego mechanizmu redukcji wymiarowości sygnałów EKG przy zachowaniu kluczowych charakterystyk diagnostycznych. Projekt stanowi praktyczne zastosowanie teorii sieci neuronowych w dziedzinie przetwarzania sygnałów biomedycznych.
+
+\section{Fundamenty teoretyczne}
+
+\subsection{Autoenkodera w kontekście kompresji}
+
+Autoenkoder stanowi szczególny typ architektury sieci neuronowej, której zadaniem jest nauczenie się efektywnej reprezentacji danych wejściowych w przestrzeni o zmniejszonej wymiarowości. Struktura składa się z dwóch głównych komponentów:
+
+\begin{itemize}
+    \item \textbf{Enkoder} $f_{\theta}: \mathbb{R}^n \rightarrow \mathbb{R}^k$ - funkcja mapująca dane wejściowe do reprezentacji ukrytej
+    \item \textbf{Dekoder} $g_{\phi}: \mathbb{R}^k \rightarrow \mathbb{R}^n$ - funkcja rekonstruująca dane z reprezentacji ukrytej
+\end{itemize}
+
+gdzie $k < n$ określa stopień kompresji, a $\theta, \phi$ reprezentują parametry uczenia odpowiednich części sieci.
+
+\subsection{Funkcja straty i optymalizacja}
+
+Proces uczenia autoenkodera opiera się na minimalizacji funkcji straty rekonstrukcji:
+
+\begin{equation}
+\mathcal{L}(\theta, \phi) = \frac{1}{m} \sum_{i=1}^{m} ||x^{(i)} - g_{\phi}(f_{\theta}(x^{(i)}))||^2
+\end{equation}
+
+gdzie $m$ oznacza liczbę próbek treningowych, a $x^{(i)}$ reprezentuje $i$-tą próbkę sygnału EKG.
+
+\subsection{Nieliniowe transformacje sygnału}
+
+W celu lepszego wykorzystania zakresu dynamicznego sieci, zastosowano nieliniowe transformacje:
+\begin{itemize}
+    \item \textbf{Przed enkodowaniem}: $x_{transformed} = \sqrt{x_{normalized}}$
+    \item \textbf{Po dekodowaniu}: $x_{reconstructed} = (decoder_{output})^2$
+\end{itemize}
+
+Transformacje te pozwalają na lepsze mapowanie charakterystyk sygnałów EKG, które często zawierają wartości w wąskim zakresie z pojedynczymi skokami amplitudy.
+
+\section{Zbiór danych i preprocessing}
+
+\subsection{Charakterystyka datasetu}
+
+Projekt wykorzystuje zbiór danych "ECG Heartbeat Categorization" dostępny na platformie Kaggle, składający się z dwóch głównych baz:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Zbiór danych} & \textbf{Liczba próbek} & \textbf{Zastosowanie} \\
+\midrule
+MIT-BIH Arrhythmia & $\sim$87,000 & Trening i walidacja \\
+PTB Diagnostic ECG & $\sim$14,500 & Testy dodatkowe \\
+\bottomrule
+\end{tabular}
+\caption{Charakterystyka wykorzystanych zbiorów danych EKG}
+\end{table}
+
+\subsection{Pipeline preprocessing}
+
+Proces przygotowania danych obejmuje następujące etapy:
+
+\begin{enumerate}
+    \item \textbf{Filtracja kategorii}: Ekstrakacja sygnałów normalnych (klasa 0) dla uczenia nienadzorowanego
+    \item \textbf{Normalizacja min-max}: Skalowanie wartości do zakresu $[0,1]$
+    \item \textbf{Konwersja typów}: Rzutowanie na \texttt{float32} dla optymalizacji obliczeń
+    \item \textbf{Transformacja nieliniowa}: Stosowanie pierwiastkowania przed enkodowaniem
+\end{enumerate}
+
+\begin{lstlisting}[caption=Funkcja normalizacji danych]
+def normalize(train_arr, test_arr):
+    min_val = np.min(train_arr, axis=(0,1))
+    max_val = np.max(train_arr, axis=(0,1))
+    train_norm = (train_arr - min_val) / (max_val - min_val)
+    test_norm = (test_arr - min_val) / (max_val - min_val)
+    return train_norm, test_norm
+\end{lstlisting}
+
+\section{Architektura systemu}
+
+\subsection{Specyfikacja modelu}
+
+Zaprojektowany autoenkoder charakteryzuje się symetryczną architekturą z wąskim gardłem (bottleneck) w warstwie środkowej:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Warstwa} & \textbf{Wymiar wej.} & \textbf{Wymiar wyj.} & \textbf{Aktywacja} \\
+\midrule
+\multicolumn{4}{c}{\textit{Enkoder}} \\
+\midrule
+Dense 1 & 187 & 100 & ReLU \\
+Dense 2 & 100 & 40 & ReLU \\
+Dense 3 (Bottleneck) & 40 & 20 & Linear \\
+\midrule
+\multicolumn{4}{c}{\textit{Dekoder}} \\
+\midrule
+Dense 4 & 20 & 40 & ReLU \\
+Dense 5 & 40 & 100 & ReLU \\
+Dense 6 (Output) & 100 & 187 & Sigmoid \\
+\bottomrule
+\end{tabular}
+\caption{Architektura sieci neuronowej autoenkodera}
+\end{table}
+
+\subsection{Implementacja w TensorFlow/Keras}
+
+Model zaimplementowano wykorzystując nowoczesne API Keras z podklasowaniem \texttt{tf.keras.Model}:
+
+\begin{lstlisting}[caption=Implementacja klasy ECGAutoEncoder]
+class ECGAutoEncoder(tf.keras.Model):
+    def __init__(self):
+        super(ECGAutoEncoder, self).__init__()
+        
+        self.encoder = tf.keras.Sequential([
+            tf.keras.layers.Dense(100, activation='relu', input_shape=(188,)),
+            tf.keras.layers.Dense(40, activation='relu'),
+            tf.keras.layers.Dense(20, activation='linear')
+        ])
+        
+        self.decoder = tf.keras.Sequential([
+            tf.keras.layers.Dense(40, activation='relu', input_shape=(20,)),
+            tf.keras.layers.Dense(100, activation='relu'),
+            tf.keras.layers.Dense(188, activation='sigmoid')
+        ])
+    
+    def call(self, x):
+        encoded = self.encode(x)
+        decoded = self.decode(encoded)
+        return decoded
+    
+    def encode(self, x):
+        return self.encoder(tf.sqrt(x))
+    
+    def decode(self, encoded):
+        return tf.square(self.decoder(encoded))
+\end{lstlisting}
+
+\subsection{Parametry kompresji}
+
+System osiąga \textbf{współczynnik kompresji 9.35:1}, redukując wymiarowość sygnału z 187 do 20 składowych. Ta znacząca redukcja wymiarów pozwala na efektywne przechowywanie i transmisję sygnałów EKG przy zachowaniu kluczowych informacji diagnostycznych.
+
+\section{Proces uczenia}
+
+\subsection{Konfiguracja treningu}
+
+Proces uczenia został skonfigurowany z następującymi parametrami:
+
+\begin{itemize}
+    \item \textbf{Optymalizator}: Adam z learning rate $1 \times 10^{-3}$
+    \item \textbf{Funkcja straty}: Mean Squared Error (MSE)
+    \item \textbf{Rozmiar batcha}: 250 próbek na epokę
+    \item \textbf{Maksymalna liczba epok}: 200
+    \item \textbf{Early stopping}: 15 epok bez poprawy
+\end{itemize}
+
+\subsection{Strategia early stopping}
+
+Zaimplementowano zaawansowany mechanizm wczesnego zatrzymania oparty na monitorowaniu:
+\begin{itemize}
+    \item Docelowego RMSE poniżej 0.0086
+    \item Stagnacji poprawy poniżej $1 \times 10^{-6}$ przez 15 epok
+    \item Zachowania najlepszych wag podczas procesu uczenia
+\end{itemize}
+
+\begin{lstlisting}[caption=Fragment pętli treningowej z early stopping]
+def train_epoch(model, optimizer, dataset, val_data, loss_fn):
+    train_ds = tf.data.Dataset.from_tensor_slices(dataset).shuffle(1000).batch(250)
+    
+    for batch in train_ds:
+        with tf.GradientTape() as tape:
+            recon = model(batch)
+            loss = loss_fn(batch, recon)
+        grads = tape.gradient(loss, model.trainable_variables)
+        optimizer.apply_gradients(zip(grads, model.trainable_variables))
+    
+    val_recon = model(val_data)
+    val_loss = tf.reduce_mean(tf.sqrt(tf.reduce_mean(tf.square(val_recon - val_data), axis=1)))
+    return float(val_loss)
+\end{lstlisting}
+
+\section{Wykorzystane technologie}
+
+\subsection{Środowisko programistyczne}
+
+Projekt został zrealizowany w środowisku Jupyter Notebook, zapewniającym interaktywność i łatwość eksperymentowania z parametrami modelu.
+
+\subsection{Biblioteki i frameworki}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Biblioteka} & \textbf{Wersja} & \textbf{Zastosowanie} \\
+\midrule
+TensorFlow & 2.x & Framework uczenia maszynowego \\
+Keras & (wbudowany) & High-level API dla sieci neuronowych \\
+NumPy & najnowsza & Operacje na tablicach wielowymiarowych \\
+Pandas & najnowsza & Manipulacja i analiza danych \\
+Matplotlib & najnowsza & Wizualizacja wyników \\
+Kagglehub & najnowsza & Automatyczne pobieranie datasets \\
+\bottomrule
+\end{tabular}
+\caption{Wykorzystane biblioteki i narzędzia}
+\end{table}
+
+\subsection{Różnice w podejściu technologicznym}
+
+W odróżnieniu od referencyjnej implementacji wykorzystującej PyTorch, niniejszy projekt bazuje na ekosystemie TensorFlow/Keras, oferując:
+
+\begin{itemize}
+    \item \textbf{Wyższego poziomu abstrakcji} dzięki Keras API
+    \item \textbf{Zintegrowane narzędzia} do wizualizacji i monitorowania
+    \item \textbf{Lepszą integrację} z Google Colab i Jupyter
+    \item \textbf{Automatyczne zarządzanie} zasobami GPU/TPU
+\end{itemize}
+
+\section{Metodologia ewaluacji}
+
+\subsection{Metryki jakości}
+
+Jakość kompresji oceniano przy użyciu następujących metryk:
+
+\begin{itemize}
+    \item \textbf{RMSE (Root Mean Square Error)}: Główna metryka rekonstrukcji
+    \item \textbf{Analiza rozkładu błędów}: Histogram błędów w skali logarytmicznej
+    \item \textbf{Wizualna ocena}: Porównanie przebiegów oryginalnych i zrekonstruowanych
+\end{itemize}
+
+\subsection{Procedura walidacji}
+
+Ewaluacja modelu obejmuje:
+\begin{enumerate}
+    \item Podział danych na zbiory treningowy i testowy
+    \item Ocenę na danych niezależnych (zbiór testowy)
+    \item Analizę statystyczną rozkładu błędów rekonstrukcji
+    \item Wizualną inspekcję jakości zrekonstruowanych sygnałów
+\end{enumerate}
+
+\section{Implementacja systemu}
+
+\subsection{Modularność kodu}
+
+Kod został zorganizowany w funkcjonalne moduły:
+\begin{itemize}
+    \item \textbf{Ładowanie danych}: Automatyczne pobieranie i preprocessing
+    \item \textbf{Model}: Definicja architektury autoenkodera
+    \item \textbf{Trening}: Pętla uczenia z monitoringiem
+    \item \textbf{Ewaluacja}: Analiza wyników i wizualizacja
+\end{itemize}
+
+\subsection{Automatyzacja pipeline}
+
+System zawiera mechanizmy automatyzacji:
+\begin{itemize}
+    \item Automatyczne pobieranie datasets z Kaggle
+    \item Fallback do lokalnych plików CSV
+    \item Automatyczne generowanie wykresów i raportów
+    \item Zarządzanie plikami tymczasowymi
+\end{itemize}
+
+% ===== NOWE SEKCJE NA WYNIKI I KOMENTARZE =====
+
+\section{Wyniki eksperymentu}
+
+\subsection{Przebieg procesu uczenia}
+
+% Tutaj wstaw wykres training_error.png i opis przebiegu treningu
+% Komentarz na temat zbieżności, liczby epok, stabilności
+
+\subsection{Metryki końcowe}
+
+% Tutaj wstaw konkretne wartości RMSE dla danych treningowych i testowych
+% Tabela z wartościami liczbowymi
+
+\subsection{Wizualizacja przykładowych sygnałów}
+
+% Tutaj wstaw wykresy ecg_samples.png
+% Opis różnic między normalnymi a anormalnymi sygnałami EKG
+
+\section{Analiza jakości kompresji}
+
+\subsection{Porównanie sygnałów oryginalnych z rekonstruowanymi}
+
+% Tutaj wstaw wykres reconstruction_comparison.png
+% Szczegółowy komentarz na temat jakości rekonstrukcji
+
+\subsection{Rozkład błędów rekonstrukcji}
+
+% Tutaj wstaw wykres error_distribution.png
+% Analiza statystyczna błędów (średnia, odchylenie standardowe, percentyle)
+
+\subsection{Ocena diagnostyczna}
+
+% Komentarz na temat przydatności diagnostycznej zrekonstruowanych sygnałów
+% Porównanie z literaturą i standardami medycznymi
+
+\section{Interpretacja wyników}
+
+\subsection{Efektywność kompresji}
+
+% Omówienie stopnia kompresji (9.35:1) w kontekście innych metod
+% Analiza trade-off między kompresją a jakością
+
+\subsection{Ograniczenia metody}
+
+% Dyskusja ograniczeń autoenkodera w kontekście sygnałów EKG
+% Identyfikacja przypadków, gdzie metoda może nie działać dobrze
+
+\subsection{Potencjalne zastosowania}
+
+% Praktyczne zastosowania w telemedycynie, przechowywaniu danych, transmisji
+% Scenariusze użycia w systemach rzeczywistych
+
+\section{Porównanie z metodami referencyjnymi}
+
+\subsection{Porównanie z implementacją PyTorch}
+
+% Porównanie wyników z dokumentacją referencyjną (PDF)
+% Różnice w wydajności, jakości, implementacji
+
+\subsection{Porównanie z tradycyjnymi metodami kompresji}
+
+% Porównanie z metodami typu wavelet, DCT, itp.
+% Zalety i wady podejścia opartego na sieciach neuronowych
+
+\section{Wnioski}
+
+\subsection{Osiągnięcia projektu}
+
+Projekt demonstruje skuteczność zastosowania nowoczesnych frameworków deep learning do kompresji sygnałów biomedycznych. Wykorzystanie TensorFlow/Keras pozwoliło na:
+
+\begin{itemize}
+    \item Szybkie prototypowanie i eksperymentowanie
+    \item Efektywną implementację złożonych architektur
+    \item Łatwą rozszerzalność i modyfikowalność kodu
+    \item Profesjonalną organizację projektu badawczego
+\end{itemize}
+
+\section{Bibliografia}
+
+\begin{thebibliography}{9}
+
+\end{thebibliography}
+
+\end{document}
