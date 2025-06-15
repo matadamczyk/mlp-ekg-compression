@@ -1,0 +1,41 @@
+Biblioteki załadowane pomyślnie
+TensorFlow version: 2.18.0
+NumPy version: 2.0.2
+Pandas version: 2.2.2
+
+Model autokodera zdefiniowany
+Stopień kompresji: 187 → 20 wymiarów (9.35x mniej danych)
+
+Normalizacja danych...
+Znormalizowane dane treningowe: (87554, 188)
+Zakres danych po normalizacji: [0.000, 1.000]
+
+Przywrócono najlepsze wagi z epoki 199
+
+Trening zakończony po 200 epokach
+Końcowy RMSE: 0.009456
+
+Ewaluacja końcowa modelu...
+Końcowy błąd treningowy (RMSE): 0.009089
+Końcowy błąder testowy (RMSE): 0.009156
+Stopień kompresji: 9.3x (187 → 20 wymiarów)
+
+Analiza rozkładu błędów rekonstrukcji...
+Błędy treningowe - średnia: -0.000067, std: 0.009839
+Błędy testowe - średnia: -0.000065, std: 0.009931
+
+============================================================
+PODSUMOWANIE EKSPERYMENTU KOMPRESJI EKG
+============================================================
+Architektura: 187 → 100 → 40 → 20 → 40 → 100 → 187
+Stopień kompresji: 9.3x
+RMSE treningowy: 0.009089
+RMSE testowy: 0.009156
+Liczba epok: 200
+Pliki wygenerowane:
+   - ecg_samples.png (przykładowe sygnały)
+   - training_error.png (krzywa uczenia)
+   - reconstruction_comparison.png (porównanie)
+   - error_distribution.png (rozkład błędów)
+============================================================
+Eksperyment zakończony pomyślnie!
