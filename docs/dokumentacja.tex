@@ -246,17 +246,6 @@ Kagglehub & najnowsza & Automatyczne pobieranie datasets \\
 \caption{Wykorzystane biblioteki i narzędzia}
 \end{table}
 
-\subsection{Różnice w podejściu technologicznym}
-
-W odróżnieniu od referencyjnej implementacji wykorzystującej PyTorch, niniejszy projekt bazuje na ekosystemie TensorFlow/Keras, oferując:
-
-\begin{itemize}
-    \item \textbf{Wyższego poziomu abstrakcji} dzięki Keras API
-    \item \textbf{Zintegrowane narzędzia} do wizualizacji i monitorowania
-    \item \textbf{Lepszą integrację} z Google Colab i Jupyter
-    \item \textbf{Automatyczne zarządzanie} zasobami GPU/TPU
-\end{itemize}
-
 \section{Metodologia ewaluacji}
 
 \subsection{Metryki jakości}
@@ -369,7 +358,7 @@ Analiza statystyczna błędów rekonstrukcji dostarcza informacji o zachowaniu m
 
 \subsection{Ocena diagnostyczna}
 
-Chociaż formalna ocena diagnostyczna wymagałaby walidacji klinicznej przez ekspertów, wstępna analiza wskazuje na duży potencjał zachowania wartości diagnostycznej sygnałów. Kluczowe cechy morfologiczne, takie jak amplituda i czas trwania zespołów QRS, które są podstawą wielu diagnoz kardiologicznych, zostały poprawnie zrekonstruowane. Oznacza to, że skompresowane dane prawdopodobnie nadal pozwalają na identyfikację podstawowych rytmów serca i anomalii. Niemniej jednak, w zastosowaniach klinicznych konieczne byłoby przeprowadzenie szczegółowych badań dotyczących wpływu kompresji na wykrywalność specyficznych schorzeń.
+Formalna ocena wartości diagnostycznej zrekonstruowanych sygnałów wymaga walidacji klinicznej przez ekspertów. Mimo że kluczowe cechy morfologiczne, takie jak zespoły QRS, wydają się wizualnie zachowane, subtelne odkształcenia wprowadzone przez kompresję stratną mogą wpływać na wiarygodność diagnostyczną. Wstępne konsultacje wskazują, że zrekonstruowany sygnał, mimo niskiego błędu RMSE, może nie być wystarczająco precyzyjny do postawienia wiarygodnej diagnozy medycznej. Z tego względu, w obecnej formie, metoda ta powinna być traktowana jako narzędzie do redukcji danych, a jej zastosowanie w diagnostyce klinicznej wymagałoby dalszych, rygorystycznych badań nad wpływem kompresji na wykrywalność poszczególnych jednostek chorobowych.
 
 \section{Interpretacja wyników}
 
@@ -379,19 +368,14 @@ Osiągnięty współczynnik kompresji na poziomie 9.35:1 jest wynikiem znaczący
 
 \subsection{Ograniczenia metody}
 
-Zastosowana metoda, jak każde rozwiązanie oparte na uczeniu maszynowym, posiada pewne ograniczenia. Model był trenowany głównie na sygnałach EKG pochodzących od pacjentów z normalnym rytmem serca. Jego zdolność do kompresji i rekonstrukcji rzadkich lub nietypowych arytmii może być ograniczona, jeśli nie były one odpowiednio reprezentowane w zbiorze treningowym. Autoenkodery są wrażliwe na dane znacząco odbiegające od rozkładu danych treningowych, co może prowadzić do większych błędów rekonstrukcji dla takich przypadków. Ponadto, model jest "czarną skrzynką", co oznacza, że interpretacja sposobu, w jaki dokonuje kompresji, jest utrudniona w porównaniu do tradycyjnych, algorytmicznych metod.
+Zastosowana metoda, jak każde rozwiązanie oparte na uczeniu maszynowym, posiada pewne ograniczenia. Model był trenowany głównie na sygnałach EKG pochodzących od pacjentów z normalnym rytmem serca. Jego zdolność do kompresji i rekonstrukcji rzadkich lub nietypowych arytmii może być ograniczona, jeśli nie były one odpowiednio reprezentowane w zbiorze treningowym. Co najważniejsze, mimo wizualnego podobieństwa i niskiego błędu rekonstrukcji, odtworzony sygnał może nie nadawać się do wiarygodnej interpretacji klinicznej, co stanowi kluczowe ograniczenie w kontekście zastosowań medycznych. Ponadto, model jest "czarną skrzynką", co oznacza, że interpretacja sposobu, w jaki dokonuje kompresji, jest utrudniona w porównaniu do tradycyjnych, algorytmicznych metod.
 
 \subsection{Potencjalne zastosowania}
 
 Opracowany system kompresji sygnałów EKG posiada szeroki wachlarz potencjalnych zastosowań praktycznych. W telemedycynie może być wykorzystany do przesyłania danych z urządzeń noszonych (np. Holter EKG) do centralnego serwera w czasie rzeczywistym. W szpitalnych systemach informatycznych może znacznie zmniejszyć koszty przechowywania wieloletnich archiwów badań EKG. Innym zastosowaniem jest analiza dużych zbiorów danych (Big Data) w badaniach naukowych, gdzie efektywna kompresja pozwala na szybsze przetwarzanie i analizę tysięcy zapisów EKG.
 
-\section{Porównanie z metodami referencyjnymi}
 
-\subsection{Porównanie z implementacją PyTorch}
-
-Bezpośrednie, ilościowe porównanie wydajności z referencyjną implementacją w PyTorch wymagałoby uruchomienia obu modeli w identycznych warunkach sprzętowych i na tych samych, precyzyjnie podzielonych zbiorach danych. Jednak na poziomie koncepcyjnym można stwierdzić, że oba wiodące frameworki, TensorFlow i PyTorch, są w stanie osiągnąć zbliżone wyniki w zadaniach tego typu. Wybór TensorFlow/Keras w niniejszym projekcie podyktowany był wyższym poziomem abstrakcji oferowanym przez Keras API, co przekłada się na szybsze prototypowanie i czytelniejszy kod, a także doskonałą integracją z ekosystemem narzędzi Google, takich jak Colab i TensorBoard.
-
-\subsection{Porównanie z tradycyjnymi metodami kompresji}
+\section{Porównanie z tradycyjnymi metodami kompresji}
 
 Tradycyjne metody kompresji sygnałów, takie jak transformata falkowa (wykorzystywana np. w standardzie JPEG 2000) czy dyskretna transformata kosinusowa (DCT), opierają się na predefiniowanych matematycznych transformacjach. Ich zaletą jest teoretyczna gwarancja jakości i pełna odwracalność w przypadku kompresji bezstratnej. Podejście oparte na autoenkoderze jest z natury stratne i data-driven. Jego przewaga polega na zdolności do nauczenia się optymalnej, nieliniowej reprezentacji specyficznie dla danego typu danych - w tym przypadku sygnałów EKG. Dzięki temu może ono potencjalnie osiągnąć wyższy współczynnik kompresji przy zachowaniu subiektywnie lepszej jakości percepcyjnej, ponieważ model uczy się, które cechy sygnału są najważniejsze do zachowania. Wadą jest natomiast konieczność posiadania dużego zbioru danych treningowych i ryzyko słabszego działania na danych nietypowych.
 
