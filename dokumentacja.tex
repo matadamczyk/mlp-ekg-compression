@@ -397,16 +397,10 @@ Tradycyjne metody kompresji sygnałów, takie jak transformata falkowa (wykorzys
 
 \section{Wnioski}
 
-\subsection{Osiągnięcia projektu}
+Przeprowadzony projekt zakończył się sukcesem, demonstrując wysoką skuteczność autoenkoderów opartych na głębokich sieciach neuronowych w zadaniu kompresji sygnałów EKG. Zaimplementowany model, wykorzystujący biblioteki TensorFlow i Keras, osiągnął znaczący współczynnik kompresji 9.35:1, redukując wymiar wektora cech z 187 do zaledwie 20. Kluczowym osiągnięciem jest uzyskanie tak dużej redukcji danych przy jednoczesnym zachowaniu niskiego błędu rekonstrukcji, co potwierdza finalna wartość metryki RMSE na poziomie około 0.0086 dla niezależnego zbioru testowego.
 
-Projekt demonstruje skuteczność zastosowania nowoczesnych frameworków deep learning do kompresji sygnałów biomedycznych. Wykorzystanie TensorFlow/Keras pozwoliło na:
+Analiza jakościowa wykazała, że zrekonstruowane sygnały z dużą wiernością odwzorowują kluczowe cechy morfologiczne oryginałów, w tym załamki P, T oraz zespoły QRS. Świadczy to o tym, że model nauczył się efektywnie kodować najważniejsze z diagnostycznego punktu widzenia informacje zawarte w sygnale. Wyniki te otwierają drogę do praktycznych zastosowań w telemedycynie, systemach długoterminowej archiwizacji danych medycznych oraz w analizie dużych zbiorów danych kardiologicznych, gdzie redukcja objętości danych ma kluczowe znaczenie.
 
-\begin{itemize}
-    \item Szybkie prototypowanie i eksperymentowanie
-    \item Efektywną implementację złożonych architektur
-    \item Łatwą rozszerzalność i modyfikowalność kodu
-    \item Profesjonalną organizację projektu badawczego
-\end{itemize}
-
+Należy jednak mieć na uwadze ograniczenia obecnego rozwiązania. Model trenowany był głównie na sygnałach EKG o prawidłowym rytmie, co może wpływać na jego wydajność w przypadku rzadkich lub nietypowych arytmii. Ponadto, natura "czarnej skrzynki" utrudnia pełną interpretowalność procesu decyzyjnego sieci neuronowej w porównaniu do klasycznych metod algorytmicznych.
 
 \end{document}
