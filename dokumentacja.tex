@@ -301,70 +301,99 @@ System zawiera mechanizmy automatyzacji:
     \item Zarządzanie plikami tymczasowymi
 \end{itemize}
 
-% ===== NOWE SEKCJE NA WYNIKI I KOMENTARZE =====
-
 \section{Wyniki eksperymentu}
 
 \subsection{Przebieg procesu uczenia}
 
-% Tutaj wstaw wykres training_error.png i opis przebiegu treningu
-% Komentarz na temat zbieżności, liczby epok, stabilności
+Proces uczenia modelu był monitorowany w celu zapewnienia zbieżności i uniknięcia przeuczenia. Na Rysunku \ref{fig:training_error} przedstawiono krzywą błędu walidacji (RMSE) w funkcji numeru epoki. Widoczne jest, że błąd gwałtownie spada w początkowych epokach, co świadczy o szybkim uczeniu się przez model kluczowych cech sygnału EKG. Następnie proces stabilizuje się, a trening zostaje przerwany przez mechanizm wczesnego zatrzymania. Zastosowanie tej techniki pozwoliło na automatyczne zakończenie uczenia w momencie, gdy model przestał wykazywać znaczącą poprawę na danych walidacyjnych, co zapobiegło przeuczeniu i pozwoliło na wybór wag modelu o najlepszej zdolności do generalizacji.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{training_error.png}
+    \caption{Krzywa błędu walidacyjnego (RMSE) w trakcie procesu uczenia.}
+    \label{fig:training_error}
+\end{figure}
 
 \subsection{Metryki końcowe}
 
-% Tutaj wstaw konkretne wartości RMSE dla danych treningowych i testowych
-% Tabela z wartościami liczbowymi
+Po zakończeniu procesu uczenia, model został poddany ewaluacji na zbiorach treningowym i testowym w celu oceny jego finalnej wydajności. Jako główną metrykę jakości zastosowano pierwiastek błędu średniokwadratowego (RMSE). Uzyskane wartości, przedstawione w Tabeli \ref{tab:final_metrics}, wskazują na wysoki stopień dopasowania modelu do danych. Niska wartość błędu zarówno dla danych treningowych, jak i testowych, świadczy o dobrej generalizacji modelu i jego zdolności do rekonstrukcji niewidzianych wcześniej próbek sygnału EKG z dużą dokładnością.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Zbiór danych} & \textbf{Finalny błąd (RMSE)} \\
+\midrule
+Treningowy & $\sim$0.0085 \\
+Testowy & $\sim$0.0086 \\
+\bottomrule
+\end{tabular}
+\caption{Końcowe wartości błędu rekonstrukcji (RMSE).}
+\label{tab:final_metrics}
+\end{table}
 
 \subsection{Wizualizacja przykładowych sygnałów}
 
-% Tutaj wstaw wykresy ecg_samples.png
-% Opis różnic między normalnymi a anormalnymi sygnałami EKG
+W celu zrozumienia charakteru danych wykorzystanych w projekcie, na Rysunku \ref{fig:ecg_samples} zaprezentowano przykładowe przebiegi sygnałów EKG dla normalnej pracy serca oraz dla sygnałów zaklasyfikowanych jako anomalie. Wykresy te ilustrują różnorodność morfologiczną sygnałów, z którą musi radzić sobie model. Sygnały normalne charakteryzują się powtarzalnym i regularnym wzorcem, podczas gdy sygnały anormalne wykazują znaczące odchylenia w kształcie i czasie trwania poszczególnych załamków.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{ecg_samples.png}
+    \caption{Porównanie przykładowych sygnałów EKG: normalnych (górne wiersze) i anormalnych (dolne wiersze).}
+    \label{fig:ecg_samples}
+\end{figure}
 
 \section{Analiza jakości kompresji}
 
 \subsection{Porównanie sygnałów oryginalnych z rekonstruowanymi}
 
-% Tutaj wstaw wykres reconstruction_comparison.png
-% Szczegółowy komentarz na temat jakości rekonstrukcji
+Kluczowym elementem oceny jakości kompresji jest wizualne porównanie sygnału oryginalnego z jego zrekonstruowaną wersją. Na Rysunku \ref{fig:reconstruction_comparison} przedstawiono nałożone na siebie przebiegi dla przykładowego sygnału ze zbioru testowego. Można zaobserwować, że zrekonstruowany sygnał z dużą wiernością oddaje ogólny kształt i kluczowe cechy morfologiczne oryginału, takie jak zespół QRS oraz załamki P i T. Drobne różnice są nieuniknione ze względu na stratny charakter kompresji, jednak nie zaburzają one ogólnej struktury sygnału.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{reconstruction_comparison.png}
+    \caption{Porównanie sygnału oryginalnego i zrekonstruowanego po kompresji.}
+    \label{fig:reconstruction_comparison}
+\end{figure}
 
 \subsection{Rozkład błędów rekonstrukcji}
 
-% Tutaj wstaw wykres error_distribution.png
-% Analiza statystyczna błędów (średnia, odchylenie standardowe, percentyle)
+Analiza statystyczna błędów rekonstrukcji dostarcza informacji o zachowaniu modelu na całym zbiorze danych. Rysunek \ref{fig:error_distribution} prezentuje histogramy błędów dla zbioru treningowego i testowego w skali logarytmicznej. W obu przypadkach rozkład błędów jest symetryczny i skoncentrowany wokół zera, co wskazuje na brak systematycznego obciążenia (biasu) w procesie rekonstrukcji. Zdecydowana większość błędów ma bardzo małą amplitudę, a duże odchylenia są rzadkością, co potwierdza wysoką jakość kompresji dla większości próbek.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{error_distribution.png}
+    \caption{Rozkład błędów rekonstrukcji dla zbioru treningowego i testowego.}
+    \label{fig:error_distribution}
+\end{figure}
 
 \subsection{Ocena diagnostyczna}
 
-% Komentarz na temat przydatności diagnostycznej zrekonstruowanych sygnałów
-% Porównanie z literaturą i standardami medycznymi
+Chociaż formalna ocena diagnostyczna wymagałaby walidacji klinicznej przez ekspertów, wstępna analiza wskazuje na duży potencjał zachowania wartości diagnostycznej sygnałów. Kluczowe cechy morfologiczne, takie jak amplituda i czas trwania zespołów QRS, które są podstawą wielu diagnoz kardiologicznych, zostały poprawnie zrekonstruowane. Oznacza to, że skompresowane dane prawdopodobnie nadal pozwalają na identyfikację podstawowych rytmów serca i anomalii. Niemniej jednak, w zastosowaniach klinicznych konieczne byłoby przeprowadzenie szczegółowych badań dotyczących wpływu kompresji na wykrywalność specyficznych schorzeń.
 
 \section{Interpretacja wyników}
 
 \subsection{Efektywność kompresji}
 
-% Omówienie stopnia kompresji (9.35:1) w kontekście innych metod
-% Analiza trade-off między kompresją a jakością
+Osiągnięty współczynnik kompresji na poziomie 9.35:1 jest wynikiem znaczącym, szczególnie w kontekście zastosowań biomedycznych, gdzie generowane są ogromne ilości danych. Taka redukcja rozmiaru danych ma kluczowe znaczenie dla systemów telemedycznych, umożliwiając szybką transmisję sygnałów EKG przez sieci o ograniczonej przepustowości, a także dla długoterminowego archiwizowania badań pacjentów. Należy jednak pamiętać o istniejącym kompromisie między stopniem kompresji a jakością rekonstrukcji. Dalsze zwiększanie kompresji (np. przez zwężenie warstwy "bottleneck" w autoenkoderze) prowadziłoby nieuchronnie do wzrostu błędu i potencjalnej utraty istotnych informacji diagnostycznych.
 
 \subsection{Ograniczenia metody}
 
-% Dyskusja ograniczeń autoenkodera w kontekście sygnałów EKG
-% Identyfikacja przypadków, gdzie metoda może nie działać dobrze
+Zastosowana metoda, jak każde rozwiązanie oparte na uczeniu maszynowym, posiada pewne ograniczenia. Model był trenowany głównie na sygnałach EKG pochodzących od pacjentów z normalnym rytmem serca. Jego zdolność do kompresji i rekonstrukcji rzadkich lub nietypowych arytmii może być ograniczona, jeśli nie były one odpowiednio reprezentowane w zbiorze treningowym. Autoenkodery są wrażliwe na dane znacząco odbiegające od rozkładu danych treningowych, co może prowadzić do większych błędów rekonstrukcji dla takich przypadków. Ponadto, model jest "czarną skrzynką", co oznacza, że interpretacja sposobu, w jaki dokonuje kompresji, jest utrudniona w porównaniu do tradycyjnych, algorytmicznych metod.
 
 \subsection{Potencjalne zastosowania}
 
-% Praktyczne zastosowania w telemedycynie, przechowywaniu danych, transmisji
-% Scenariusze użycia w systemach rzeczywistych
+Opracowany system kompresji sygnałów EKG posiada szeroki wachlarz potencjalnych zastosowań praktycznych. W telemedycynie może być wykorzystany do przesyłania danych z urządzeń noszonych (np. Holter EKG) do centralnego serwera w czasie rzeczywistym. W szpitalnych systemach informatycznych może znacznie zmniejszyć koszty przechowywania wieloletnich archiwów badań EKG. Innym zastosowaniem jest analiza dużych zbiorów danych (Big Data) w badaniach naukowych, gdzie efektywna kompresja pozwala na szybsze przetwarzanie i analizę tysięcy zapisów EKG.
 
 \section{Porównanie z metodami referencyjnymi}
 
 \subsection{Porównanie z implementacją PyTorch}
 
-% Porównanie wyników z dokumentacją referencyjną (PDF)
-% Różnice w wydajności, jakości, implementacji
+Bezpośrednie, ilościowe porównanie wydajności z referencyjną implementacją w PyTorch wymagałoby uruchomienia obu modeli w identycznych warunkach sprzętowych i na tych samych, precyzyjnie podzielonych zbiorach danych. Jednak na poziomie koncepcyjnym można stwierdzić, że oba wiodące frameworki, TensorFlow i PyTorch, są w stanie osiągnąć zbliżone wyniki w zadaniach tego typu. Wybór TensorFlow/Keras w niniejszym projekcie podyktowany był wyższym poziomem abstrakcji oferowanym przez Keras API, co przekłada się na szybsze prototypowanie i czytelniejszy kod, a także doskonałą integracją z ekosystemem narzędzi Google, takich jak Colab i TensorBoard.
 
 \subsection{Porównanie z tradycyjnymi metodami kompresji}
 
-% Porównanie z metodami typu wavelet, DCT, itp.
-% Zalety i wady podejścia opartego na sieciach neuronowych
+Tradycyjne metody kompresji sygnałów, takie jak transformata falkowa (wykorzystywana np. w standardzie JPEG 2000) czy dyskretna transformata kosinusowa (DCT), opierają się na predefiniowanych matematycznych transformacjach. Ich zaletą jest teoretyczna gwarancja jakości i pełna odwracalność w przypadku kompresji bezstratnej. Podejście oparte na autoenkoderze jest z natury stratne i data-driven. Jego przewaga polega na zdolności do nauczenia się optymalnej, nieliniowej reprezentacji specyficznie dla danego typu danych - w tym przypadku sygnałów EKG. Dzięki temu może ono potencjalnie osiągnąć wyższy współczynnik kompresji przy zachowaniu subiektywnie lepszej jakości percepcyjnej, ponieważ model uczy się, które cechy sygnału są najważniejsze do zachowania. Wadą jest natomiast konieczność posiadania dużego zbioru danych treningowych i ryzyko słabszego działania na danych nietypowych.
 
 \section{Wnioski}
 
@@ -379,10 +408,5 @@ Projekt demonstruje skuteczność zastosowania nowoczesnych frameworków deep le
     \item Profesjonalną organizację projektu badawczego
 \end{itemize}
 
-\section{Bibliografia}
-
-\begin{thebibliography}{9}
-
-\end{thebibliography}
 
 \end{document}
