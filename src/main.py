@@ -21,28 +21,14 @@ def run_shell(command: str) -> int:
 
 # Ładowanie danych - pobieranie lub lokalnie
 def load_ecg_dataset():
-    try:
-        dataset_path = Path(kagglehub.dataset_download("shayanfazeli/heartbeat"))
-        print(f"Dataset path: {dataset_path}")
-        
-        train_data = pd.read_csv(dataset_path / 'mitbih_train.csv', header=None)
-        test_data = pd.read_csv(dataset_path / 'mitbih_test.csv', header=None)
-        abnormal_data = pd.read_csv(dataset_path / 'ptbdb_abnormal.csv', header=None)
-        normal_data = pd.read_csv(dataset_path / 'ptbdb_normal.csv', header=None)
-    except Exception as err:
-        print(f"Pobieranie nie powiodło się: {err}")
-        print("Przechodzę do lokalnych plików lub rozpakowywania 7z...")
-        
-        # Jeśli pliki nie istnieją, próbujemy rozpakować
-        if not file_exists("mitbih_test.csv"):
-            success = any(run_shell(cmd) == 0 for cmd in ["7za e data.7z.001", "7z e data.7z.001", "7zz e data.7z.001"])
-            if not success:
-                print("Zainstaluj 7za lub 7z, by rozpakować archiwum.")
-        
-        train_data = pd.read_csv('mitbih_train.csv', header=None)
-        test_data = pd.read_csv('mitbih_test.csv', header=None)
-        abnormal_data = pd.read_csv('ptbdb_abnormal.csv', header=None)
-        normal_data = pd.read_csv('ptbdb_normal.csv', header=None)
+    dataset_path = Path(kagglehub.dataset_download("shayanfazeli/heartbeat"))
+    print(f"Dataset path: {dataset_path}")
+    
+    train_data = pd.read_csv(dataset_path / 'mitbih_train.csv', header=None)
+    test_data = pd.read_csv(dataset_path / 'mitbih_test.csv', header=None)
+    abnormal_data = pd.read_csv(dataset_path / 'ptbdb_abnormal.csv', header=None)
+    normal_data = pd.read_csv(dataset_path / 'ptbdb_normal.csv', header=None)
+
     return train_data, test_data, abnormal_data, normal_data
 
 # Przygotowanie danych do treningu/testu
